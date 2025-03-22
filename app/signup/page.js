@@ -13,6 +13,15 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Add the missing handleChange function
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -33,9 +42,12 @@ export default function Signup() {
         throw new Error(data.error || 'Signup failed');
       }
 
-      // Store both user data and phone number separately
-      localStorage.setItem('userData', JSON.stringify(data.user));
-      localStorage.setItem('userPhoneNumber', formData.phoneNumber); // Store phone number separately
+      // Only store data in localStorage on the client side
+      if (typeof window !== 'undefined') {
+        // Store both user data and phone number separately
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('userPhoneNumber', formData.phoneNumber);
+      }
       
       // Redirect to location page after successful signup
       router.push('/location');
