@@ -1,16 +1,39 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ServicePopup from '../../components/ServicePopup';
 
-export default function ServiceSelectionPage() {
+// SearchParamsWrapper component that safely uses useSearchParams inside Suspense
+function SearchParamsWrapper({ children }) {
   const searchParams = useSearchParams();
+  return children(searchParams);
+}
+
+export default function ServiceSelectionPage() {
+  // Move everything into a Suspense boundary
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        <p className="ml-3 text-gray-700">Loading service options...</p>
+      </div>
+    }>
+      <SearchParamsWrapper>
+        {(searchParams) => <ServiceSelectionContent searchParams={searchParams} />}
+      </SearchParamsWrapper>
+    </Suspense>
+  );
+}
+
+// Move all the component logic into this content component
+function ServiceSelectionContent({ searchParams }) {
   const [vendor, setVendor] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [cart, setCart] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Get vendorId and service from query params
   const vendorId = searchParams.get('vendorId');
@@ -18,6 +41,9 @@ export default function ServiceSelectionPage() {
   
   useEffect(() => {
     // Try to get vendor from localStorage
+    if (typeof window === "undefined") return;
+    
+    setIsLoading(true);
     const savedVendor = localStorage.getItem('selectedVendor');
     let vendorData = null;
     
@@ -40,7 +66,10 @@ export default function ServiceSelectionPage() {
             localStorage.setItem('selectedVendor', JSON.stringify(data.vendor));
           }
         })
-        .catch(err => console.error("Error fetching vendor:", err));
+        .catch(err => console.error("Error fetching vendor:", err))
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
     
     // Get selected category from localStorage or create it from service param
@@ -77,23 +106,27 @@ export default function ServiceSelectionPage() {
   
   // Function to add items to cart
   const addToCart = (item) => {
+    if (typeof window === "undefined") return;
+    
     const existingItemIndex = cart.findIndex(i => i.id === item.id);
+    let updatedCart;
     
     if (existingItemIndex !== -1) {
       // Update quantity of existing item
-      const updatedCart = [...cart];
+      updatedCart = [...cart];
       updatedCart[existingItemIndex] = {
         ...updatedCart[existingItemIndex],
         quantity: updatedCart[existingItemIndex].quantity + 1
       };
-      setCart(updatedCart);
     } else {
       // Add new item with quantity of 1
-      setCart([...cart, { ...item, quantity: 1 }]);
+      updatedCart = [...cart, { ...item, quantity: 1 }];
     }
     
+    setCart(updatedCart);
+    
     // Save to localStorage
-    localStorage.setItem('cart', JSON.stringify([...cart, { ...item, quantity: 1 }]));
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
   };
   
   // Function to close popup
@@ -102,10 +135,29 @@ export default function ServiceSelectionPage() {
     window.location.href = '/cart'; // Redirect to home or cart
   };
   
-  if (!vendor || !selectedCategory) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        <p className="ml-3 text-gray-700">Loading service details...</p>
+      </div>
+    );
+  }
+  
+  if (!vendor || !selectedCategory) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 text-center">
+        <svg className="w-20 h-20 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h2 className="text-2xl font-bold text-gray-700 mb-2">Service Not Found</h2>
+        <p className="text-gray-600 mb-6">We couldn't find the service or vendor you're looking for.</p>
+        <Link 
+          href="/search" 
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+        >
+          Browse Services
+        </Link>
       </div>
     );
   }
