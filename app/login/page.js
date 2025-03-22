@@ -1,0 +1,102 @@
+'use client';
+// app/login/page.js
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+export default function Login() {
+  const router = useRouter();
+  const role = localStorage.getItem('role');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store both user data and phone number separately
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      localStorage.setItem('userPhoneNumber', phoneNumber); // Store phone number separately
+      localStorage.setItem('role', data.user.role); // Store role separately
+      
+      // Redirect to dashboard if vendor else redirect to 
+            // Redirect based on role
+            if (role === "vendor") {
+              router.push("/dashboard");
+            } else {
+              router.push("/search");
+            }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+          <p className="text-gray-600">Login with your phone number</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+91 9876543210"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+
+          <div className="text-center mt-4">
+            <span className="text-gray-600">Don&apos;t have an account? </span>
+            <Link href="/signup" className="text-black font-semibold hover:underline">
+              Sign up
+            </Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strictNullChecks": true
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx"
+, "config/dbConfig.js", "models/booking.model.js", "models/user.model.js", "app/api/availability/[vendorId]/route.js", "app/api/book/route.js", "app/api/chatbot/route.js", "app/api/findVendors/route.js", "app/api/payment/route.js", "app/api/profile/route.js", "app/api/updateUser/route.js"  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
