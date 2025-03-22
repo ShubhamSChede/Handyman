@@ -1,15 +1,37 @@
 'use client';
 // app/login/page.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Login() {
   const router = useRouter();
-  const role = localStorage.getItem('role');
+  // Don't access localStorage at the top level
+  const [role, setRole] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Access localStorage safely in useEffect
+  useEffect(() => {
+    // Check if already logged in
+    const storedUserData = localStorage.getItem('userData');
+    const storedRole = localStorage.getItem('role');
+    
+    if (storedUserData) {
+      // User is already logged in, redirect based on role
+      if (storedRole === 'vendor') {
+        router.push('/dashboard');
+      } else {
+        router.push('/search');
+      }
+    }
+    
+    // Set role state if it exists
+    if (storedRole) {
+      setRole(storedRole);
+    }
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,14 +57,14 @@ export default function Login() {
       localStorage.setItem('userData', JSON.stringify(data.user));
       localStorage.setItem('userPhoneNumber', phoneNumber); // Store phone number separately
       localStorage.setItem('role', data.user.role); // Store role separately
+      localStorage.setItem('isLoggedIn', 'true'); // Set login state for global usage
       
-      // Redirect to dashboard if vendor else redirect to 
-            // Redirect based on role
-            if (role === "vendor") {
-              router.push("/dashboard");
-            } else {
-              router.push("/search");
-            }
+      // Redirect based on role from the API response
+      if (data.user.role === "vendor") {
+        router.push("/dashboard");
+      } else {
+        router.push("/search");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
