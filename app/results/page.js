@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -122,8 +122,30 @@ const MapBounds = ({ vendors, userLocation }) => {
   return null;
 };
 
-export default function ResultsPage() {
+// SearchParamsWrapper component that safely uses useSearchParams inside Suspense
+function SearchParamsWrapper({ children }) {
   const searchParams = useSearchParams();
+  return children(searchParams);
+}
+
+export default function ResultsPage() {
+  // Instead of directly using useSearchParams at the top level, we'll wait for the Suspense boundary
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        <p className="mt-4 text-gray-600">Loading service providers...</p>
+      </div>
+    }>
+      <SearchParamsWrapper>
+        {(searchParams) => <ResultsContent searchParams={searchParams} />}
+      </SearchParamsWrapper>
+    </Suspense>
+  );
+}
+
+// Move the main component logic into ResultsContent
+function ResultsContent({ searchParams }) {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -174,20 +196,23 @@ export default function ResultsPage() {
     });
   }, []);
   
-  // Load user location from localStorage
+  // Load user location from localStorage - safely handling client-side only code
   useEffect(() => {
-    try {
-      const userLatitude = localStorage.getItem("userLatitude");
-      const userLongitude = localStorage.getItem("userLongitude");
-      
-      if (userLatitude && userLongitude) {
-        setUserLocation({
-          lat: parseFloat(userLatitude),
-          lng: parseFloat(userLongitude)
-        });
+    // Safe check for browser environment
+    if (typeof window !== "undefined") {
+      try {
+        const userLatitude = localStorage.getItem("userLatitude");
+        const userLongitude = localStorage.getItem("userLongitude");
+        
+        if (userLatitude && userLongitude) {
+          setUserLocation({
+            lat: parseFloat(userLatitude),
+            lng: parseFloat(userLongitude)
+          });
+        }
+      } catch (error) {
+        console.error("Error loading user location:", error);
       }
-    } catch (error) {
-      console.error("Error loading user location:", error);
     }
   }, []);
   
@@ -247,6 +272,9 @@ export default function ResultsPage() {
   };
   
   const handleVendorSelect = (vendor) => {
+    // Safe check for browser environment
+    if (typeof window === "undefined") return;
+    
     // Store selected vendor in localStorage
     localStorage.setItem('selectedVendor', JSON.stringify(vendor));
     
@@ -315,6 +343,7 @@ export default function ResultsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Rest of the component remains the same */}
       <header className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
@@ -349,9 +378,9 @@ export default function ResultsPage() {
         </p>
 
         {/* AI Recommendation Banner */}
-        {!loading && !error && aiRecommendation && aiRecommendation.bestVendor && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-lg shadow-sm">
-            <div className="flex items-start gap-3">
+        {aiRecommendation && (
+          <div className="bg-indigo-50 p-4 rounded-lg shadow mb-6">
+            <div className="flex items-center">
               <div className="bg-indigo-100 p-2 rounded-full">
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
