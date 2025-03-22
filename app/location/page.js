@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from 'next/dynamic';
-import L from 'leaflet';
 
 // Dynamically load Leaflet components with SSR disabled
 const MapContainer = dynamic(
@@ -40,18 +39,21 @@ const MapUpdaterComponent = dynamic(
   { ssr: false }
 );
 
-// Fix Leaflet marker icon issue in Next.js
-const createIcon = () => {
-  // Only create the icon on the client side
-  if (typeof window !== "undefined") {
-    return L.icon({
-      iconUrl: '/marker-icon.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
+// Fix Leaflet marker icon issue in Next.js - Move to client-side only
+const LeafletIcon = dynamic(
+  () => {
+    return Promise.resolve(() => {
+      // Import L only on client side
+      const L = require('leaflet');
+      return L.icon({
+        iconUrl: '/marker-icon.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
     });
-  }
-  return null;
-};
+  },
+  { ssr: false }
+);
 
 export default function LocationPage() {
   const router = useRouter();
@@ -88,36 +90,38 @@ export default function LocationPage() {
   // Add state for Leaflet icon
   const [icon, setIcon] = useState(null);
   
-  // Initialize icon only on client side
+  // Add state to track if the component is mounted (client-side)
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Initialize component as mounted only on client side
   useEffect(() => {
-    setIcon(createIcon());
+    setIsMounted(true);
   }, []);
 
+  // Check if user is authenticated - client side only
   useEffect(() => {
-    // Check if user is authenticated
-    if (typeof window !== "undefined") {
-      const phoneNumber = localStorage.getItem("userPhoneNumber");
-      const userData = localStorage.getItem("userData");
-      
-      if (!phoneNumber || !userData) {
-        router.push('/login');
-        return;
-      }
+    // Only run on client side
+    if (!isMounted) return;
+    
+    const phoneNumber = localStorage.getItem("userPhoneNumber");
+    const userData = localStorage.getItem("userData");
+    
+    if (!phoneNumber || !userData) {
+      router.push('/login');
     }
-  }, []);
+  }, [isMounted, router]);
 
-  // Modified to store coordinates in localStorage when they change
+  // Modified to store coordinates in localStorage when they change - client side only
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("userLatitude", latitude.toString());
-      localStorage.setItem("userLongitude", longitude.toString());
-    }
-  }, [latitude, longitude]);
+    if (!isMounted) return;
+    
+    localStorage.setItem("userLatitude", latitude.toString());
+    localStorage.setItem("userLongitude", longitude.toString());
+  }, [latitude, longitude, isMounted]);
 
-  // Check if user is already authenticated on page load
+  // Check if user is already authenticated on page load - client side only
   useEffect(() => {
-    // Only access localStorage on the client side
-    if (typeof window === "undefined") return;
+    if (!isMounted) return;
 
     const savedAddress = localStorage.getItem("userAddress");
     
@@ -212,13 +216,11 @@ export default function LocationPage() {
     };
     
     fetchUserData();
-  }, []);
+  }, [isMounted]);
 
-  // Rest of your code remains the same...
-  // Get user's current location
+  // Get user's current location - client side only
   const getUserLocation = () => {
-    // Check if we're on the client side
-    if (typeof window === "undefined" || !navigator.geolocation) {
+    if (!isMounted || !navigator.geolocation) {
       setLocationError("Geolocation is not supported by your browser");
       return;
     }
@@ -229,10 +231,34 @@ export default function LocationPage() {
     
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        // ... rest of the function remains the same
+        // Update with the position coordinates
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        setLatitude(lat);
+        setLongitude(lng);
+        setMapCenter([lat, lng]);
+        
+        // Perform reverse geocoding if needed
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const data = await response.json();
+          
+          if (data && data.display_name) {
+            setLocation(data.display_name);
+          } else {
+            setLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          }
+        } catch (error) {
+          console.error("Error during reverse geocoding:", error);
+          setLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        } finally {
+          setIsDetectingLocation(false);
+        }
       },
       (error) => {
-        // ... rest of the function remains the same
+        setIsDetectingLocation(false);
+        setLocationError(`Error getting location: ${getGeolocationErrorMessage(error)}`);
       },
       {
         enableHighAccuracy: true,
@@ -242,19 +268,50 @@ export default function LocationPage() {
     );
   };
 
+  // Helper function to get a user-friendly geolocation error message
+  const getGeolocationErrorMessage = (error) => {
+    switch(error.code) {
+      case error.PERMISSION_DENIED:
+        return "Location permission denied. Please enable location services in your browser settings.";
+      case error.POSITION_UNAVAILABLE:
+        return "Location information is unavailable.";
+      case error.TIMEOUT:
+        return "Location request timed out.";
+      default:
+        return "An unknown error occurred.";
+    }
+  };
+
+  // Handler for adding a service
+  const handleAddService = () => {
+    if (serviceInput.trim() === "") return;
+    
+    // Check if service already exists
+    if (!servicesOffered.includes(serviceInput.trim())) {
+      setServicesOffered([...servicesOffered, serviceInput.trim()]);
+    }
+    
+    setServiceInput("");
+  };
+  
+  // Handler for removing a service
+  const handleRemoveService = (serviceToRemove) => {
+    setServicesOffered(servicesOffered.filter(service => service !== serviceToRemove));
+  };
+
   // Add manual coordinate update function
   const updateCoordinates = (lat, lng) => {
     setLatitude(lat);
     setLongitude(lng);
     setMapCenter([lat, lng]);
     
-    if (typeof window !== "undefined") {
+    if (isMounted) {
       localStorage.setItem("userLatitude", lat.toString());
       localStorage.setItem("userLongitude", lng.toString());
     }
   };
 
-  // Update handleSubmit to check for window
+  // Update handleSubmit to check for client-side
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -284,18 +341,65 @@ export default function LocationPage() {
     };
     
     // Save to localStorage as fallback (client-side only)
-    if (typeof window !== "undefined") {
+    if (isMounted) {
       localStorage.setItem("userAddress", JSON.stringify(addressData));
       localStorage.setItem("userLatitude", latitude.toString());
       localStorage.setItem("userLongitude", longitude.toString());
     }
     
-    // Rest of the function remains the same...
+    // Set submitting state
+    setIsSubmitting(true);
+    setSubmitError("");
+    
+    try {
+      // Send data to server API
+      const response = await fetch('/api/updateUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: addressData.fullAddress,
+          location: {
+            type: "Point",
+            coordinates: [longitude, latitude] // GeoJSON format: [longitude, latitude]
+          },
+          role,
+          // Include vendor-specific fields if the role is vendor
+          ...(role === "vendor" && {
+            servicesOffered,
+            pricing: pricing ? parseFloat(pricing) : undefined,
+            availability: {
+              startTime,
+              endTime
+            }
+          })
+        }),
+      });
+      
+      if (response.ok) {
+        // Redirect based on role
+        if (role === "vendor") {
+          router.push('/dashboard/vendor');
+        } else {
+          router.push('/dashboard/user');
+        }
+      } else {
+        // Handle error response
+        const errorData = await response.json();
+        setSubmitError(errorData.message || "Error updating profile. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting data:", error);
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Render the map conditionally
+  // Render the map conditionally - client side only
   const renderMap = () => {
-    if (typeof window === "undefined") return null;
+    if (!isMounted) return null;
     
     return (
       <div className="h-[300px] mb-8 rounded-lg overflow-hidden border border-gray-200">
@@ -308,7 +412,9 @@ export default function LocationPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          {icon && <Marker position={mapCenter} icon={icon} />}
+          <LeafletIcon>
+            {(icon) => <Marker position={mapCenter} icon={icon} />}
+          </LeafletIcon>
           <MapUpdaterComponent center={mapCenter} />
         </MapContainer>
       </div>
