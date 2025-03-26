@@ -89,7 +89,7 @@ const ServiceGrid = () => {
     }
 
     // Get saved address
-    const savedAddress = localStorage.getItem("userAddress");
+    const savedAddress = localStorage.getItem("address");
     console.log('savedAddress', savedAddress);
     if (savedAddress) {
       try {
