@@ -11,6 +11,7 @@ export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState('');
 
   // Access localStorage safely in useEffect
   useEffect(() => {
@@ -58,7 +59,9 @@ export default function Login() {
       localStorage.setItem('userPhoneNumber', phoneNumber); // Store phone number separately
       localStorage.setItem('role', data.user.role); // Store role separately
       localStorage.setItem('isLoggedIn', 'true'); // Set login state for global usage
-      localStorage.setItem('userAddress', data.user.address); //address
+      //store address and landmark
+      localStorage.setItem('address', data.user.address);
+      localStorage.setItem('landmark', data.user.landmark);
       
       // Redirect based on role from the API response
       if (data.user.role === "vendor") {

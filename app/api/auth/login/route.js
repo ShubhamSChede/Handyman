@@ -30,7 +30,9 @@ export async function POST(request) {
           id: user._id,
           name: user.name,
           phoneNumber: user.phoneNumber,
-          role: user.role
+          role: user.role,
+          address: user.address, // Include address
+          landmark: user.landmark // Include landmark
         }
       });
     } catch (error) {
