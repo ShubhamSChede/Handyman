@@ -1,8 +1,75 @@
-// app/api/updateUser/route.js
 import { NextResponse } from "next/server";
 import { connect } from "../../../config/dbConfig";
 import User from "../../../models/user.model";
 import { authenticateUser } from "../../../middleware/authMiddleware";
+
+export async function GET(request) {
+  try {
+    await connect();
+    const auth = await authenticateUser(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Get user ID from authenticated session
+    const { userId } = auth;
+    
+    // Optional: Get query parameters if you want to allow admin users to fetch other users
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get('userId');
+    
+    // Determine which user to fetch
+    const queryId = targetUserId || userId;
+    
+    // If targetUserId is provided, check if current user has permission to view other profiles
+    if (targetUserId && targetUserId !== userId) {
+      // Get the requesting user to check their role
+      const requestingUser = await User.findById(userId);
+      if (!requestingUser || requestingUser.role !== 'admin') {
+        return NextResponse.json(
+          { error: "Not authorized to view other user profiles" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Fetch the user
+    const user = await User.findById(queryId);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Prepare user response without sensitive information
+    const userResponse = {
+      id: user._id,
+      name: user.name,
+      phoneNumber: user.phoneNumber,
+      address: user.address,
+      landmark: user.landmark,
+      role: user.role,
+      location: user.location,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
+    // Add vendor-specific fields to response if applicable
+    if (user.role === "vendor") {
+      userResponse.servicesOffered = user.servicesOffered;
+      userResponse.pricing = user.pricing;
+      userResponse.availability = user.availability;
+      userResponse.isAvailable = user.isAvailable;
+    }
+
+    return NextResponse.json({ user: userResponse }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request) {
   try {
