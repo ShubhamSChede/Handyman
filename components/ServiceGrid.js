@@ -80,6 +80,7 @@ const ServiceGrid = () => {
     // Safe way to get userData from localStorage
     try {
       const storedUserData = localStorage.getItem('userData');
+      console.log('storedUserData', storedUserData);
       if (storedUserData) {
         setUserData(JSON.parse(storedUserData));
       }
