@@ -1,9 +1,10 @@
+//C:\Users\shubh\Desktop\ishack\uncommited-commiters\frontend\utils\aiRecommendation.js
 import { OpenAI } from "openai";
 
 // Using only environment variables, no hardcoded tokens
-const token = process.env.OPENAI_API_KEY;
-const endpoint = process.env.OPENAI_API_ENDPOINT || "https://models.inference.ai.azure.com";
-const modelName = process.env.OPENAI_MODEL_NAME || "gpt-4o";
+const token = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+const endpoint = process.env.NEXT_PUBLIC_OPENAI_API_ENDPOINT || "https://models.inference.ai.azure.com";
+const modelName = process.env.NEXT_PUBLIC_OPENAI_MODEL_NAME || "gpt-4o";
 
 /**
  * Get AI recommendation for the best vendor based on the available vendors
