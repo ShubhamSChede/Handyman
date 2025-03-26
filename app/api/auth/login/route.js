@@ -33,10 +33,6 @@ export async function POST(request) {
           role: user.role,
           address: user.address, // Include address
           landmark: user.landmark, // Include landmark
-          houseNumber: user.houseNumber, // Include house number if available
-          street: user.street, // Include street if available
-          zipCode: user.zipCode, // Include zip code if available
-          // Include any other address-related fields you have stored for the user
         }
       });
     } catch (error) {

@@ -243,7 +243,7 @@ const ServiceGrid = () => {
       {userAddress && (
         <div className="flex items-center mb-2 text-gray-600">
           <svg 
-            className="h-5 w-5 mr-2" 
+            className="h-5 w-5 mr-2 flex-shrink-0" 
             xmlns="http://www.w3.org/2000/svg" 
             fill="none" 
             viewBox="0 0 24 24" 
@@ -262,16 +262,49 @@ const ServiceGrid = () => {
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
             />
           </svg>
-          <span className="text-sm">
-            Delivering to: {userAddress.location || 'Unknown location'}
-            {userAddress.houseNumber && `, ${userAddress.houseNumber}`}
-            {userAddress.street && ` ${userAddress.street}`}
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">
+              Delivering to: {userAddress.location || 'Unknown location'}
+            </span>
+            {userAddress.landmark && (
+              <span className="text-xs text-gray-500">
+                Landmark: {userAddress.landmark}
+              </span>
+            )}
+          </div>
+          <button 
+            onClick={() => window.location.href = '/location'}
+            className="ml-2 text-black hover:text-gray-700 text-sm underline flex-shrink-0"
+          >
+            Change
+          </button>
+        </div>
+      )}
+
+      {!userAddress && (
+        <div className="flex items-center mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <svg 
+            className="h-5 w-5 mr-2 text-yellow-500" 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+            />
+          </svg>
+          <span className="text-sm text-yellow-800">
+            Please set your delivery address
           </span>
           <button 
             onClick={() => window.location.href = '/location'}
-            className="ml-2 text-black hover:text-gray-700 text-sm underline"
+            className="ml-auto px-3 py-1 bg-yellow-500 text-white rounded-md text-sm hover:bg-yellow-600"
           >
-            Change
+            Set Address
           </button>
         </div>
       )}
