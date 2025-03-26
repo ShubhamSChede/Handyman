@@ -79,6 +79,9 @@ const ServiceGrid = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     
+    // Debug localStorage
+    console.log("ServiceGrid mounted, all localStorage keys:", Object.keys(localStorage));
+
     // Safe way to get userData from localStorage
     try {
       const storedUserData = localStorage.getItem('userData');
@@ -97,9 +100,23 @@ const ServiceGrid = () => {
       console.log('savedUserAddress', savedUserAddress);
       
       if (savedUserAddress) {
-        const parsedAddress = JSON.parse(savedUserAddress);
-        setUserAddress(parsedAddress);
-        console.log("Found userAddress:", parsedAddress);
+        try {
+          const parsedAddress = JSON.parse(savedUserAddress);
+          console.log("Successfully parsed userAddress:", parsedAddress);
+          setUserAddress(parsedAddress);
+        } catch (e) {
+          // If it's a string (not JSON), create an object from it
+          console.log("userAddress is not JSON, got string:", savedUserAddress);
+          const addressObj = {
+            location: savedUserAddress,
+            landmark: localStorage.getItem("landmark") || ''
+          };
+          console.log("Created address object from string:", addressObj);
+          setUserAddress(addressObj);
+          
+          // Fix it for next time
+          localStorage.setItem("userAddress", JSON.stringify(addressObj));
+        }
       } 
       // If that fails, try the old 'address' string and build an object
       else {
