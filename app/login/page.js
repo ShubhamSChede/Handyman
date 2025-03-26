@@ -58,6 +58,7 @@ export default function Login() {
       localStorage.setItem('userPhoneNumber', phoneNumber); // Store phone number separately
       localStorage.setItem('role', data.user.role); // Store role separately
       localStorage.setItem('isLoggedIn', 'true'); // Set login state for global usage
+      localStorage.setItem('userAddress', data.user.address); //address
       
       // Redirect based on role from the API response
       if (data.user.role === "vendor") {
@@ -122,3 +123,4 @@ export default function Login() {
     </div>
   );
 }
+
