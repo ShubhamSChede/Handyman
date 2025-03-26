@@ -15,6 +15,8 @@ export default function Login() {
 
   // Access localStorage safely in useEffect
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    
     // Check if already logged in
     const storedUserData = localStorage.getItem('userData');
     const storedRole = localStorage.getItem('role');
@@ -59,9 +61,23 @@ export default function Login() {
       localStorage.setItem('userPhoneNumber', phoneNumber); // Store phone number separately
       localStorage.setItem('role', data.user.role); // Store role separately
       localStorage.setItem('isLoggedIn', 'true'); // Set login state for global usage
-      //store address and landmark
-      localStorage.setItem('address', data.user.address);
-      localStorage.setItem('landmark', data.user.landmark);
+      
+      // Create a properly structured address object for use in ServiceGrid
+      // This matches the format expected in ServiceGrid.js
+      const addressObject = {
+        location: data.user.address || '',
+        landmark: data.user.landmark || '',
+        // Add any other address fields you have
+        houseNumber: data.user.houseNumber || '',
+        street: data.user.street || ''
+      };
+      
+      // Store the properly formatted address object
+      localStorage.setItem('userAddress', JSON.stringify(addressObject));
+      
+      // Store individual address components if needed
+      if (data.user.address) localStorage.setItem('address', data.user.address);
+      if (data.user.landmark) localStorage.setItem('landmark', data.user.landmark);
       
       // Redirect based on role from the API response
       if (data.user.role === "vendor") {

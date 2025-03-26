@@ -77,6 +77,8 @@ const ServiceGrid = () => {
   const [cart, setCart] = useState([]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    
     // Safe way to get userData from localStorage
     try {
       const storedUserData = localStorage.getItem('userData');
@@ -88,16 +90,39 @@ const ServiceGrid = () => {
       console.error("Error parsing user data:", e);
     }
 
-    // Get saved address
-    const savedAddress = localStorage.getItem("address");
-    console.log('savedAddress', savedAddress);
-    if (savedAddress) {
-      try {
-        const addressData = JSON.parse(savedAddress);
-        setUserAddress(addressData);
-      } catch (e) {
-        console.error("Error parsing saved address:", e);
+    // Try multiple approaches to get the address
+    try {
+      // First try the new proper format (userAddress)
+      const savedUserAddress = localStorage.getItem("userAddress");
+      console.log('savedUserAddress', savedUserAddress);
+      
+      if (savedUserAddress) {
+        const parsedAddress = JSON.parse(savedUserAddress);
+        setUserAddress(parsedAddress);
+        console.log("Found userAddress:", parsedAddress);
+      } 
+      // If that fails, try the old 'address' string and build an object
+      else {
+        const addressString = localStorage.getItem("address");
+        const landmarkString = localStorage.getItem("landmark");
+        
+        console.log('addressString', addressString);
+        console.log('landmarkString', landmarkString);
+        
+        if (addressString) {
+          const basicAddressObj = {
+            location: addressString,
+            landmark: landmarkString || ''
+          };
+          setUserAddress(basicAddressObj);
+          console.log("Created address object from string:", basicAddressObj);
+          
+          // Store it in the proper format for future use
+          localStorage.setItem("userAddress", JSON.stringify(basicAddressObj));
+        }
       }
+    } catch (e) {
+      console.error("Error parsing saved address:", e);
     }
     
     // Get coordinates from localStorage
@@ -125,6 +150,7 @@ const ServiceGrid = () => {
   
   // Save cart to localStorage whenever it changes
   useEffect(() => {
+    if (typeof window === "undefined") return;
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
@@ -164,7 +190,7 @@ const ServiceGrid = () => {
   const handleServiceClick = (serviceId) => {
     // Check if user has an address set
     if (!userAddress) {
-      // If no address, redirect to location page first
+      // Redirect to location page if no address is set
       window.location.href = '/location';
       return;
     }
@@ -180,7 +206,6 @@ const ServiceGrid = () => {
     localStorage.setItem("selectedCategory", JSON.stringify(category));
     
     // Get the service name that matches the vendor's servicesOffered format
-    // For example, convert "ac-appliances" to "AC Appliances" to match API naming
     const serviceName = category.name;
     
     // Redirect to results page with service parameter
@@ -238,7 +263,7 @@ const ServiceGrid = () => {
             />
           </svg>
           <span className="text-sm">
-            Delivering to: {userAddress.location}
+            Delivering to: {userAddress.location || 'Unknown location'}
             {userAddress.houseNumber && `, ${userAddress.houseNumber}`}
             {userAddress.street && ` ${userAddress.street}`}
           </span>
