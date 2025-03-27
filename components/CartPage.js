@@ -67,29 +67,59 @@ const CartPage = () => {
         
         // Create a new object to store availability data
         const newAvailabilityData = {};
+        const newSelectedTimeSlots = {...selectedTimeSlots};
         
         // Fetch availability for each unique vendor
         for (const vendorId of uniqueVendors) {
           if (!vendorId) continue;
           
-          const response = await axios.get(
-            `/api/availability/${vendorId}?date=${selectedDate}`
-          );
-          
-          newAvailabilityData[vendorId] = response.data;
-          
-          // Initialize selected time slot for this vendor if not already set
-          if (!selectedTimeSlots[vendorId]) {
-            setSelectedTimeSlots(prev => ({
-              ...prev,
-              [vendorId]: response.data.availableSlots && response.data.availableSlots.length > 0
-                ? response.data.availableSlots[0]
-                : null
-            }));
+          try {
+            // Using relative URL for better compatibility
+            const response = await axios.get(
+              `/api/availability/${vendorId}?date=${selectedDate}`
+            );
+            
+            // Log response for debugging
+            console.log(`Availability data for vendor ${vendorId}:`, response.data);
+            
+            // Make sure we have valid data with available slots
+            if (response.data && Array.isArray(response.data.availableSlots)) {
+              newAvailabilityData[vendorId] = response.data;
+              
+              // The available slots array should already exclude booked slots
+              // Now handle selection of a slot
+              const availableSlots = response.data.availableSlots;
+              const currentSlot = selectedTimeSlots[vendorId];
+              
+              if (!currentSlot || !availableSlots.includes(currentSlot)) {
+                // If we have available slots, select the first one
+                if (availableSlots.length > 0) {
+                  newSelectedTimeSlots[vendorId] = availableSlots[0];
+                } else {
+                  // Otherwise clear the selection
+                  newSelectedTimeSlots[vendorId] = "";
+                }
+              }
+            } else {
+              console.error("Invalid availability data for vendor:", vendorId, response.data);
+              newAvailabilityData[vendorId] = { 
+                availableSlots: [], 
+                workingHours: { start: "09:00", end: "18:00" }
+              };
+              newSelectedTimeSlots[vendorId] = "";
+            }
+          } catch (error) {
+            console.error(`Error fetching availability for vendor ${vendorId}:`, error);
+            newAvailabilityData[vendorId] = { 
+              availableSlots: [], 
+              workingHours: { start: "09:00", end: "18:00" }
+            };
+            newSelectedTimeSlots[vendorId] = "";
           }
         }
         
         setAvailabilityData(newAvailabilityData);
+        setSelectedTimeSlots(newSelectedTimeSlots);
       } catch (error) {
         console.error("Error fetching vendor availability:", error);
         setAvailabilityError("Failed to fetch vendor availability. Please try again.");
@@ -219,7 +249,14 @@ const CartPage = () => {
     
     return cart.every(item => {
       const vendorId = item.vendorId;
-      return vendorId && selectedTimeSlots[vendorId];
+      if (!vendorId) return true; // Skip check for items without a vendor ID
+      
+      // Check if we have a non-empty time slot selected and available slots exist
+      return (
+        selectedTimeSlots[vendorId] && 
+        selectedTimeSlots[vendorId] !== "" &&
+        availabilityData[vendorId]?.availableSlots?.length > 0
+      );
     });
   };
 
@@ -386,7 +423,7 @@ const CartPage = () => {
       {availabilityError && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg mb-6 flex items-start">
           <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1 8a1 1 0 01-1-1v-4a1 1 0 112 0v4a1 1 0 01-1 1z" clipRule="evenodd" />
           </svg>
           <p>{availabilityError}</p>
         </div>
@@ -543,11 +580,17 @@ const CartPage = () => {
                   {availabilityData[item.vendorId].availableSlots && 
                    availabilityData[item.vendorId].availableSlots.length > 0 ? (
                     <div className="mt-2">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-gray-500">
+                          {availabilityData[item.vendorId].availableSlots.length} time slot(s) available
+                        </span>
+                      </div>
                       <select
                         value={selectedTimeSlots[item.vendorId] || ''}
                         onChange={(e) => handleTimeSlotChange(item.vendorId, e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
+                        <option value="" disabled>Select a time slot</option>
                         {availabilityData[item.vendorId].availableSlots.map((slot) => (
                           <option key={slot} value={slot}>
                             {slot}
@@ -555,12 +598,12 @@ const CartPage = () => {
                         ))}
                       </select>
                       <p className="text-xs text-gray-500 mt-1">
-                        Working hours: {availabilityData[item.vendorId].workingHours?.start} - {availabilityData[item.vendorId].workingHours?.end}
+                        Working hours: {availabilityData[item.vendorId].workingHours?.start || "09:00"} - {availabilityData[item.vendorId].workingHours?.end || "18:00"}
                       </p>
                     </div>
                   ) : (
                     <p className="text-sm text-red-500 mt-1">
-                      No available slots for this date. Please select another date.
+                      All time slots are booked for this date. Please select another date.
                     </p>
                   )}
                 </div>

@@ -56,7 +56,7 @@ export default function ConfirmationPage() {
       };
       
       // Make API call to submit the review
-      const response = await axios.patch('http://localhost:3000/api/review', reviewData, {
+      const response = await axios.patch('/api/review', reviewData, {
         headers: {
           'x-phone-number': phoneNumber,
           'Content-Type': 'application/json'
