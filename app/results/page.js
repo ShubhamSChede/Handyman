@@ -224,8 +224,8 @@ function ResultsContent({ searchParams }) {
       try {
         setLoading(true);
         
-        // Use the specified API endpoint
-        const response = await fetch(`http://localhost:3000/api/findVendors?service=${encodeURIComponent(service)}`);
+        // Use relative URL instead of absolute URL with localhost
+        const response = await fetch(`/api/findVendors?service=${encodeURIComponent(service)}`);
         
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
