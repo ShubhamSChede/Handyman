@@ -39,22 +39,6 @@ const MapUpdaterComponent = dynamic(
   { ssr: false }
 );
 
-// Fix Leaflet marker icon issue in Next.js - Move to client-side only
-const LeafletIcon = dynamic(
-  () => {
-    return Promise.resolve(() => {
-      // Import L only on client side
-      const L = require('leaflet');
-      return L.icon({
-        iconUrl: '/marker-icon.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-      });
-    });
-  },
-  { ssr: false }
-);
-
 export default function LocationPage() {
   const router = useRouter();
   const [location, setLocation] = useState("");
@@ -86,9 +70,6 @@ export default function LocationPage() {
   // Add loading state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  
-  // Add state for Leaflet icon
-  const [icon, setIcon] = useState(null);
   
   // Add state to track if the component is mounted (client-side)
   const [isMounted, setIsMounted] = useState(false);
@@ -401,6 +382,9 @@ export default function LocationPage() {
   const renderMap = () => {
     if (!isMounted) return null;
     
+    // Import Leaflet inside the renderMap function to ensure it's only used on the client side
+    const L = require('leaflet');
+    
     return (
       <div className="h-[300px] mb-8 rounded-lg overflow-hidden border border-gray-200">
         <MapContainer
@@ -412,9 +396,14 @@ export default function LocationPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          <LeafletIcon>
-            {(icon) => <Marker position={mapCenter} icon={icon} />}
-          </LeafletIcon>
+          <Marker 
+            position={mapCenter} 
+            icon={L.icon({
+              iconUrl: '/marker-icon.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+            })} 
+          />
           <MapUpdaterComponent center={mapCenter} />
         </MapContainer>
       </div>
@@ -862,4 +851,5 @@ export default function LocationPage() {
       </main>
     </div>
   );
+
 }
