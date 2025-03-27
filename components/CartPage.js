@@ -73,7 +73,7 @@ const CartPage = () => {
           if (!vendorId) continue;
           
           const response = await axios.get(
-            `http://localhost:3000/api/availability/${vendorId}?date=${selectedDate}`
+            `/api/availability/${vendorId}?date=${selectedDate}`
           );
           
           newAvailabilityData[vendorId] = response.data;
@@ -266,7 +266,7 @@ const CartPage = () => {
         console.log("Sending booking request:", bookingData);
         
         // Make the API call with phone number in header
-        const response = await axios.post('http://localhost:3000/api/book', bookingData, {
+        const response = await axios.post('/api/book', bookingData, {
           headers: {
             'x-phone-number': finalPhoneNumber,
             'Content-Type': 'application/json'
