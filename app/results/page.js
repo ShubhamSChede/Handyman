@@ -256,19 +256,67 @@ function ResultsContent({ searchParams }) {
     
     setLoadingRecommendation(true);
     try {
-      const recommendation = await getBestVendorRecommendation(
-        vendorData, 
-        serviceName,
-        userLocation
-      );
+      // Use our server endpoint instead of direct OpenAI API call
+      const response = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vendors: vendorData,
+          serviceType: serviceName,
+          userLocation
+        }),
+      });
       
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const recommendation = await response.json();
       console.log("AI Recommendation:", recommendation);
       setAiRecommendation(recommendation);
     } catch (error) {
       console.error("Error getting AI recommendation:", error);
+      // Fallback to simple recommendation when server call fails
+      if (vendorData.length > 0) {
+        const fallbackVendor = findBestVendorFallback(vendorData);
+        if (fallbackVendor) {
+          setAiRecommendation({
+            bestVendor: fallbackVendor,
+            reasoning: "Recommended based on rating and availability."
+          });
+        }
+      }
     } finally {
       setLoadingRecommendation(false);
     }
+  };
+  
+  // Fallback function to find the best vendor without using AI
+  const findBestVendorFallback = (vendors) => {
+    if (!vendors || vendors.length === 0) return null;
+    
+    // Filter to available vendors first
+    const availableVendors = vendors.filter(v => v.isAvailable);
+    const vendorsToCheck = availableVendors.length > 0 ? availableVendors : vendors;
+    
+    // Sort by rating (if ratings exist)
+    const vendorsWithRatings = vendorsToCheck.filter(
+      v => v.reviews && v.reviews.length > 0
+    );
+    
+    if (vendorsWithRatings.length > 0) {
+      // Return the vendor with highest average rating
+      return vendorsWithRatings.sort((a, b) => {
+        const aRating = a.reviews.reduce((sum, r) => sum + r.rating, 0) / a.reviews.length;
+        const bRating = b.reviews.reduce((sum, r) => sum + r.rating, 0) / b.reviews.length;
+        return bRating - aRating;
+      })[0];
+    }
+    
+    // If no vendors with ratings, return the first available one
+    return vendorsToCheck[0];
   };
   
   const handleVendorSelect = (vendor) => {
@@ -378,7 +426,7 @@ function ResultsContent({ searchParams }) {
         </p>
 
         {/* AI Recommendation Banner */}
-        {aiRecommendation && (
+        {aiRecommendation && aiRecommendation.bestVendor && (
           <div className="bg-indigo-50 p-4 rounded-lg shadow mb-6">
             <div className="flex items-center">
               <div className="bg-indigo-100 p-2 rounded-full">

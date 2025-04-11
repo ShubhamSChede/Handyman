@@ -3,8 +3,8 @@ import { OpenAI } from "openai";
 
 // Using only environment variables, no hardcoded tokens
 const token = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-const endpoint = process.env.NEXT_PUBLIC_OPENAI_API_ENDPOINT || "https://models.inference.ai.azure.com";
-const modelName = process.env.NEXT_PUBLIC_OPENAI_MODEL_NAME || "gpt-4o";
+const endpoint = process.env.NEXT_PUBLIC_OPENAI_API_ENDPOINT ;
+const modelName = process.env.NEXT_PUBLIC_OPENAI_MODEL_NAME ;
 
 /**
  * Get AI recommendation for the best vendor based on the available vendors
