@@ -315,7 +315,11 @@ export default function LocationPage() {
       }
       
       // Redirect based on role
-      router.push('/search');
+      if (role === "vendor") {
+        router.push('/dashboard');
+      } else {
+        router.push('/search');
+      }
     } catch (error) {
       console.error("Error submitting data:", error);
       setSubmitError(error.message || "Network error. Please try again.");
